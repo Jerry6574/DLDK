@@ -17,13 +17,39 @@ def get_webdriver(chrome_options=None):
     return browser
 
 
+def concat_all(folder, pg, spg, delete_csv=True):
+    csv_paths = []
+    csv_df_list = []
+
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            if file.endswith(".csv"):
+                csv_paths.append(os.path.join(folder, root, file))
+
+    for csv_path in csv_paths:
+        csv_df = pd.read_csv(csv_path)
+        csv_df["Product Group"] = pg
+        csv_df["Subproduct Group"] = spg
+        csv_df_list.append(csv_df)
+
+    if delete_csv:
+        delete_files(folder)
+
+
+def delete_files(folder):
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            os.remove(os.path.join(folder, root, file))
+
+
 class DLDK:
     def __init__(self, url):
         self.url = url
-        self.n_items = self.get_n_items()
-        self.n_pages = self.get_n_pages()
+        self.n_items = 0
+        self.n_pages = 0
         self.pg = url.split('/')[5]
         self.spg = url.split('/')[6]
+        self.dl_spg_dir = ""
 
     def get_n_items(self):
         browser = get_webdriver()
@@ -41,6 +67,7 @@ class DLDK:
     def get_n_pages(self):
         page_size = 500
 
+        n_pages = 0
         if self.n_items <= 500:
             n_pages = 1
         elif self.n_items % page_size == 0:
@@ -51,9 +78,13 @@ class DLDK:
         return n_pages
 
     def dl_spg(self, dl_root):
+        self.n_items = self.get_n_items()
+        self.n_pages = self.get_n_pages()
+
         chrome_options = webdriver.ChromeOptions()
         pg_spg = self.pg + "_" + self.spg
         dl_dir = os.path.join(dl_root, pg_spg)
+        self.dl_spg_dir = dl_dir
 
         if not os.path.isdir(dl_dir):
             os.mkdir(dl_dir)
@@ -109,8 +140,11 @@ class DLDK:
 def main():
     url = "https://www.digikey.com/products/en/connectors-interconnects/terminal-blocks-headers-plugs-and-sockets/370"
     tb = DLDK(url)
+
     dl_root = r"C:\Users\jerryw\Desktop\Programming_Projects\dl_dk\dl_root"
     tb.dl_spg(dl_root)
+
+    concat_all(tb.dl_spg_dir, tb.pg, tb.spg, delete_csv=False)
 
 
 if __name__ == '__main__':
