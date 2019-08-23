@@ -4,8 +4,6 @@ import re
 import pandas as pd
 import os
 import time
-import datetime
-import bs4
 
 
 def get_webdriver(chrome_options=None):
@@ -26,8 +24,7 @@ def delete_files(folder):
 class DLDK:
     default_dl_root = os.path.join(os.getcwd(), "dl_root")
 
-    def __init__(self, filename, url, dl_root=default_dl_root):
-        self.filename = filename
+    def __init__(self, url, dl_root=default_dl_root):
         self.url = url
         self.dl_root = dl_root
 
@@ -70,13 +67,13 @@ class DLDK:
 
         return n_pages
 
-    def dl_spg(self, dl_root):
+    def dl_spg(self, page_start=1):
         self.n_items = self.get_n_items()
         self.n_pages = self.get_n_pages()
 
         chrome_options = webdriver.ChromeOptions()
         pg_spg = self.pg + "_" + self.spg
-        dl_dir = os.path.join(dl_root, pg_spg)
+        dl_dir = os.path.join(self.dl_root, pg_spg)
         self.dl_spg_dir = dl_dir
 
         if not os.path.isdir(dl_dir):
@@ -87,7 +84,7 @@ class DLDK:
 
         n_try = 0
 
-        for i in range(1, self.n_pages+1):
+        for i in range(page_start, self.n_pages+1):
             while n_try < 5:
                 try:
                     dl_spg_url = self.url + "?pageSize=500" + "&page=" + str(i)
@@ -145,7 +142,8 @@ class DLDK:
             csv_df_list.append(csv_df)
 
         csv_df_concat = pd.concat(csv_df_list, ignore_index=True)
-        csv_df_concat.to_excel(os.path.join(self.concat_dir, self.filename + ".xlsx"), index=False)
+        pg_spg = self.pg + "_" + self.spg
+        csv_df_concat.to_excel(os.path.join(self.concat_dir, pg_spg + ".xlsx"), index=False)
 
         time.sleep(10)
         if delete_csv:
@@ -153,14 +151,10 @@ class DLDK:
 
 
 def main():
-    filename = "terminal block on DK"
     url = "https://www.digikey.com/products/en/connectors-interconnects/terminal-blocks-headers-plugs-and-sockets/370"
-    tb = DLDK(filename, url)
-
-    dl_root = r"C:\Users\jerryw\Desktop\Programming_Projects\dl_dk\dl_root"
-    tb.dl_spg(dl_root)
-
-    tb.concat_all(delete_csv=True)
+    tb = DLDK(url)
+    tb.dl_spg(page_start=1)
+    tb.concat_all()
 
 
 if __name__ == '__main__':
