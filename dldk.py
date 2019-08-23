@@ -17,25 +17,6 @@ def get_webdriver(chrome_options=None):
     return browser
 
 
-def concat_all(folder, pg, spg, delete_csv=True):
-    csv_paths = []
-    csv_df_list = []
-
-    for root, dirs, files in os.walk(folder):
-        for file in files:
-            if file.endswith(".csv"):
-                csv_paths.append(os.path.join(folder, root, file))
-
-    for csv_path in csv_paths:
-        csv_df = pd.read_csv(csv_path)
-        csv_df["Product Group"] = pg
-        csv_df["Subproduct Group"] = spg
-        csv_df_list.append(csv_df)
-
-    if delete_csv:
-        delete_files(folder)
-
-
 def delete_files(folder):
     for root, dirs, files in os.walk(folder):
         for file in files:
@@ -43,13 +24,25 @@ def delete_files(folder):
 
 
 class DLDK:
-    def __init__(self, url):
+    default_dl_root = os.path.join(os.getcwd(), "dl_root")
+
+    def __init__(self, filename, url, dl_root=default_dl_root):
+        self.filename = filename
         self.url = url
+        self.dl_root = dl_root
+
+        if not os.path.isdir(self.dl_root):
+            os.mkdir(self.dl_root)
+
         self.n_items = 0
         self.n_pages = 0
+
         self.pg = url.split('/')[5]
         self.spg = url.split('/')[6]
-        self.dl_spg_dir = ""
+        pg_spg = self.pg + "_" + self.spg
+
+        self.dl_spg_dir = os.path.join(self.dl_root, pg_spg)
+        self.concat_dir = os.path.join(os.getcwd(), "concat")
 
     def get_n_items(self):
         browser = get_webdriver()
@@ -136,15 +129,38 @@ class DLDK:
         prefs = {"download.default_directory": r"C:\Users\jerryw\Downloads"}
         chrome_options.add_experimental_option("prefs", prefs)
 
+    def concat_all(self, delete_csv=False):
+        csv_paths = []
+        csv_df_list = []
+
+        for root, dirs, files in os.walk(self.dl_spg_dir):
+            for file in files:
+                if file.endswith(".csv"):
+                    csv_paths.append(os.path.join(self.dl_spg_dir, root, file))
+
+        for csv_path in csv_paths:
+            csv_df = pd.read_csv(csv_path)
+            csv_df["Product Group"] = self.pg
+            csv_df["Subproduct Group"] = self.spg
+            csv_df_list.append(csv_df)
+
+        csv_df_concat = pd.concat(csv_df_list, ignore_index=True)
+        csv_df_concat.to_excel(os.path.join(self.concat_dir, self.filename + ".xlsx"), index=False)
+
+        time.sleep(10)
+        if delete_csv:
+            delete_files(self.dl_spg_dir)
+
 
 def main():
+    filename = "terminal block on DK"
     url = "https://www.digikey.com/products/en/connectors-interconnects/terminal-blocks-headers-plugs-and-sockets/370"
-    tb = DLDK(url)
+    tb = DLDK(filename, url)
 
     dl_root = r"C:\Users\jerryw\Desktop\Programming_Projects\dl_dk\dl_root"
     tb.dl_spg(dl_root)
 
-    concat_all(tb.dl_spg_dir, tb.pg, tb.spg, delete_csv=False)
+    tb.concat_all(delete_csv=True)
 
 
 if __name__ == '__main__':
