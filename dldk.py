@@ -148,14 +148,3 @@ class DLDK:
         time.sleep(10)
         if delete_csv:
             delete_files(self.dl_spg_dir)
-
-
-def main():
-    url = "https://www.digikey.com/products/en/connectors-interconnects/terminal-blocks-headers-plugs-and-sockets/370"
-    tb = DLDK(url)
-    tb.dl_spg(page_start=1)
-    tb.concat_all()
-
-
-if __name__ == '__main__':
-    main()
