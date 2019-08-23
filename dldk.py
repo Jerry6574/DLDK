@@ -55,12 +55,13 @@ class DLDK:
         pg_spg = self.pg + "_" + self.spg
         dl_dir = os.path.join(dl_root, pg_spg)
 
-        # https://www.digikey.com/products/en/connectors-interconnects/terminal-blocks-headers-plugs-and-sockets/370?pageSize=500
+        if not os.path.isdir(dl_dir):
+            os.mkdir(dl_dir)
+
         prefs = {"download.default_directory": dl_dir}
         chrome_options.add_experimental_option("prefs", prefs)
 
         n_try = 0
-        browser = None
 
         for i in range(1, self.n_pages+1):
             while n_try < 5:
@@ -87,20 +88,29 @@ class DLDK:
                         time.sleep(1)
                         dl_buttons[1].click()
 
-                    time.sleep(5)
+                    time.sleep(8)
+
+                    rename_src = os.path.join(dl_dir, "download.csv")
+                    rename_dst = os.path.join(dl_dir, "dl_" + str(i) + ".csv")
+                    os.rename(rename_src, rename_dst)
                     browser.quit()
                     break
+
                 except (NoSuchElementException, TimeoutException, WebDriverException):
                     browser.quit()
                     print("Fail " + str(n_try))
                     n_try += 1
 
+        # reset to default download directory
+        prefs = {"download.default_directory": r"C:\Users\jerryw\Downloads"}
+        chrome_options.add_experimental_option("prefs", prefs)
+
 
 def main():
     url = "https://www.digikey.com/products/en/connectors-interconnects/terminal-blocks-headers-plugs-and-sockets/370"
     tb = DLDK(url)
-    tb.dl_spg()
-    print(tb.n_items, tb.n_pages, tb.pg, tb.spg)
+    dl_root = r"C:\Users\jerryw\Desktop\Programming_Projects\dl_dk\dl_root"
+    tb.dl_spg(dl_root)
 
 
 if __name__ == '__main__':
