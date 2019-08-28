@@ -5,6 +5,8 @@ import pandas as pd
 import os
 import time
 
+j = 1
+
 
 def get_webdriver(chrome_options=None):
     chromedriver_path = r"lib/chromedriver"
@@ -55,6 +57,10 @@ class DLDK:
         return n_items
 
     def get_n_pages(self):
+        if "page=1" in self.url and "pageSize=500" in self.url:
+            return 1
+
+        self.n_items = self.get_n_items()
         page_size = 500
 
         n_pages = 0
@@ -67,8 +73,7 @@ class DLDK:
 
         return n_pages
 
-    def dl_spg(self, page_start=1):
-        self.n_items = self.get_n_items()
+    def dl_spg(self, wsw_pn=None, page_start=1, file_index=None):
         self.n_pages = self.get_n_pages()
 
         chrome_options = webdriver.ChromeOptions()
@@ -87,9 +92,16 @@ class DLDK:
         for i in range(page_start, self.n_pages+1):
             while n_try < 5:
                 try:
-                    dl_spg_url = self.url + "?pageSize=500" + "&page=" + str(i)
+                    if "page=" in self.url and "pageSize=" in self.url:
+                        dl_spg_url = self.url
+                    elif "?" not in self.url:
+                        dl_spg_url = self.url + "?pageSize=500" + "&page=" + str(i)
+                    else:
+                        dl_spg_url = self.url + "&pageSize=500" + "&page=" + str(i)
+
                     browser = get_webdriver(chrome_options)
                     browser.get(dl_spg_url)
+
                     try:
                         toggle_ok = browser.find_element_by_css_selector("div.button")
                         toggle_ok.click()
@@ -110,11 +122,23 @@ class DLDK:
                         dl_buttons[1].click()
 
                     time.sleep(8)
+                    browser.quit()
 
                     rename_src = os.path.join(dl_dir, "download.csv")
-                    rename_dst = os.path.join(dl_dir, "dl_" + str(i) + ".csv")
+
+                    if file_index is not None:
+                        rename_dst = os.path.join(dl_dir, "dl_" + str(file_index) + ".csv")
+                    else:
+                        rename_dst = os.path.join(dl_dir, "dl_" + str(i) + ".csv")
+
                     os.rename(rename_src, rename_dst)
-                    browser.quit()
+                    df = pd.read_csv(rename_dst)
+
+                    if wsw_pn is not None:
+                        df["WSW PN"] = wsw_pn
+
+                    df.to_excel(rename_dst.replace(".csv", ".xlsx"))
+                    os.remove(rename_dst)
                     break
 
                 except (NoSuchElementException, TimeoutException, WebDriverException):
@@ -148,3 +172,29 @@ class DLDK:
         time.sleep(10)
         if delete_csv:
             delete_files(self.dl_spg_dir)
+
+
+# download one product group
+def one_dl(url, page_start=1, wsw_pn=None, file_index=None, concat=True):
+    tb = DLDK(url)
+    tb.dl_spg(wsw_pn=wsw_pn, page_start=page_start, file_index=file_index)
+    if concat:
+        tb.concat_all(delete_csv=True)
+
+
+# download multiple product group
+def multi_dl(filename, concat=True):
+    df = pd.read_excel(filename)
+
+    for file_index, row in enumerate(df.itertuples()):
+        wsw_pn = getattr(row, "WSW_PN")
+        url = getattr(row, "DK_Link")
+        one_dl(url, wsw_pn=wsw_pn, concat=concat, file_index=file_index+8)
+
+
+def main():
+    multi_dl("dl list.xlsx", concat=False)
+
+
+if __name__ == '__main__':
+    main()
