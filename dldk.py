@@ -57,7 +57,7 @@ class DLDK:
         return n_items
 
     def get_n_pages(self):
-        if "page=1" in self.url and "pageSize=500" in self.url:
+        if ("page=1" in self.url and "pageSize=500" in self.url) or ("product-detail" in self.url):
             return 1
 
         self.n_items = self.get_n_items()
@@ -106,6 +106,7 @@ class DLDK:
                         toggle_ok = browser.find_element_by_css_selector("div.button")
                         toggle_ok.click()
                     except:
+
                         pass
                     time.sleep(1)
                     # scroll to bottom of page
@@ -115,12 +116,21 @@ class DLDK:
 
                     dl_buttons = browser.find_elements_by_css_selector("form.download-table input.button")
                     try:
-                        dl_buttons[1].click()
+                        try:
+                            dl_buttons[1].click()
+                        except IndexError:
+                            browser.quit()
+                            print("1 item: ", wsw_pn, self.url)
+                            return
                     except WebDriverException:
                         browser.find_element_by_css_selector("div.popover--overlay").click()
                         time.sleep(1)
-                        dl_buttons[1].click()
-
+                        try:
+                            dl_buttons[1].click()
+                        except IndexError:
+                            print("1 item: ", wsw_pn, self.url)
+                            browser.quit()
+                            return
                     time.sleep(8)
                     browser.quit()
 
@@ -189,7 +199,7 @@ def multi_dl(filename, concat=True):
     for file_index, row in enumerate(df.itertuples()):
         wsw_pn = getattr(row, "WSW_PN")
         url = getattr(row, "DK_Link")
-        one_dl(url, wsw_pn=wsw_pn, concat=concat, file_index=file_index+8)
+        one_dl(url, wsw_pn=wsw_pn, concat=concat, file_index=file_index)
 
 
 def main():
