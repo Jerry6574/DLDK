@@ -140,6 +140,8 @@ class DLDK:
                         rename_dst = os.path.join(dl_dir, "dl_" + str(file_index) + ".csv")
                     else:
                         rename_dst = os.path.join(dl_dir, "dl_" + str(i) + ".csv")
+                        if os.path.isfile(rename_dst.replace(".csv", ".xlsx")):
+                            rename_dst = os.path.join(dl_dir, "dl_" + str(get_next_file_index(dl_dir)) + ".csv")
 
                     os.rename(rename_src, rename_dst)
                     df = pd.read_csv(rename_dst)
@@ -202,9 +204,17 @@ def multi_dl(filename, concat=True):
         one_dl(url, wsw_pn=wsw_pn, concat=concat, file_index=file_index)
 
 
-def main():
-    multi_dl("dl list.xlsx", concat=False)
+def get_next_file_index(dl_dir):
+    files = os.listdir(dl_dir)
+    if len(files) == 0:
+        return 1
+    else:
+        dl_files = [dl_file for dl_file in files if "dl_" in dl_file]
+        return len(dl_files) + 1
 
-
-if __name__ == '__main__':
-    main()
+# def main():
+#     multi_dl("dl list.xlsx", concat=False)
+#
+#
+# if __name__ == '__main__':
+#     main()
