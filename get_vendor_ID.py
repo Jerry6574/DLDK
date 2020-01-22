@@ -1,6 +1,7 @@
 import bs4
 import requests
 import pandas as pd
+import time
 
 
 def get_soup(url):
@@ -66,12 +67,18 @@ def get_vendor_id(supplier_url):
 
 def main():
     suppliers_df = dk_suppliers()
-
+    print(suppliers_df)
     vendor_ids = []
-    for url in suppliers_df['Supplier URL'].tolist():
+
+    for row in suppliers_df.itertuples(index=False):
+        url = getattr(row, '_1')
+        supplier = getattr(row, '_0')
+
         _id = get_vendor_id(url)
-        print(_id)
         vendor_ids.append(_id)
+
+        print(_id, supplier, url)
+        time.sleep(5)
 
     suppliers_df["Vendor ID"] = vendor_ids
     suppliers_df.to_excel("suppliers_id.xlsx", index=False)
